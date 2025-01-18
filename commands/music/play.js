@@ -1,12 +1,14 @@
 const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const { VoiceConnectionStatus, AudioPlayerStatus, joinVoiceChannel, getVoiceConnections } = require('@discordjs/voice');
 const { createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType  } = require('@discordjs/voice');
-const { createReadStream } = require('node:fs');
-const ytdl = require("@distube/ytdl-core");
+const { createReadStream, createWriteStream } = require('node:fs');
 const playdl = require('play-dl');
-const distube = require('distube');
-const client = require('../../index.js');
-const { YouTubeDLPlugin } = require('@distube/yt-dlp');
+const ytdl = require("@distube/ytdl-core");
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+
+const url = "https://www.youtube.com/watch?v=DiUGv1vsuSU";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -18,9 +20,17 @@ module.exports = {
                 .setDescription('The channel to join')
                 .setRequired(true)
                 .addChannelTypes(ChannelType.GuildVoice)
-            ),
+            )
+        .addStringOption(option =>
+            option.setName('url')
+                .setDescription('The url to play')),
 
 	async execute(interaction) {
+        await executeBatFile(url);
+
+        const url2 = interaction.options;
+        console.log(url2);
+
 		await interaction.deferReply();
 
         const voiceChannel = interaction.options.getChannel('channel');
@@ -37,8 +47,10 @@ module.exports = {
         });
 
         const subscription = connection.subscribe(player);
-        const resource = createAudioResource(createReadStream('./321.opus'), {
-            inputType: StreamType.OggOpus,
+
+        const FileName = "123.opus";
+        const resource = createAudioResource(createReadStream('./commands/music/songs/' + FileName), {
+            inputType: StreamType.Arbitrary,
         });
         player.play(resource);
 
@@ -56,3 +68,22 @@ module.exports = {
         });
 	},
 };
+
+async function executeBatFile(url){
+    // Path to your batch file
+    const batFilePath = path.join(__dirname, 'yt-download.bat');
+    // console.log(batFilePath);
+
+    var runnableScript = exec(`${batFilePath} ${url}`,
+        (error, stdout, stderr) => {
+            console.log(stdout);
+            console.log(stderr);
+            if (error !== null) {
+                console.log(`exec error: ${error}`);
+            }
+        });
+
+
+
+    return 1;
+}
