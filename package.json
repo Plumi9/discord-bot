@@ -10,12 +10,7 @@
   "description": "",
   "dependencies": {
     "@discordjs/voice": "^0.18.0",
-    "@distube/yt-dlp": "^2.0.1",
-    "@distube/ytdl-core": "^4.15.8",
     "discord.js": "^14.17.3",
-    "distube": "^5.0.4",
-    "libsodium-wrappers": "^0.7.15",
-    "play-dl": "^1.9.7",
-    "ytdl-core": "^4.11.5"
+    "libsodium-wrappers": "^0.7.15"
   }
 }

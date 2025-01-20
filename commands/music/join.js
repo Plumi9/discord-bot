@@ -2,9 +2,6 @@ const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const { VoiceConnectionStatus, AudioPlayerStatus, joinVoiceChannel, getVoiceConnections } = require('@discordjs/voice');
 const { createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType  } = require('@discordjs/voice');
 const { createReadStream, createWriteStream } = require('node:fs');
-const playdl = require('play-dl');
-const ytdl = require("@distube/ytdl-core");
-const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 
