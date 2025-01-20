@@ -1,89 +1,79 @@
-const { SlashCommandBuilder, ChannelType } = require('discord.js');
-const { VoiceConnectionStatus, AudioPlayerStatus, joinVoiceChannel, getVoiceConnections } = require('@discordjs/voice');
-const { createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType  } = require('@discordjs/voice');
-const { createReadStream, createWriteStream } = require('node:fs');
-const playdl = require('play-dl');
-const ytdl = require("@distube/ytdl-core");
-const fs = require('fs');
+const { SlashCommandBuilder } = require('discord.js');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType, AudioPlayerStatus } = require('@discordjs/voice');
 const path = require('path');
 const { exec } = require('child_process');
-
-const url = "https://www.youtube.com/watch?v=DiUGv1vsuSU";
+const { createReadStream } = require('node:fs');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('join')
-		.setDescription('Joins a voice channel!')
-        .addChannelOption(option =>
+		.setName('play')
+		.setDescription('Plays a song!')
+        .addStringOption((option) => 
             option
-                .setName('channel')
-                .setDescription('The channel to join')
-                .setRequired(true)
-                .addChannelTypes(ChannelType.GuildVoice)
-            )
-        .addStringOption(option =>
-            option.setName('url')
-                .setDescription('The url to play')),
-
+                .setName('link')
+                .setDescription('link to yt video')
+                .setRequired(true)),
 	async execute(interaction) {
-        await executeBatFile(url);
+        await interaction.deferReply();
+        // get link from command
+        const link = interaction.options.getString('link');
+        // download opus file from link with yt-dlp
+        await executeBatFile(link);
 
-        const url2 = interaction.options;
-        console.log(url2);
-
-		await interaction.deferReply();
-
-        const voiceChannel = interaction.options.getChannel('channel');
+        // get Voice Channel
+        const voiceChannel = interaction.member.voice.channel;
+        if (!voiceChannel) {
+            await interaction.reply('You need to be in a voice channel to use this command!');
+            return;
+        }
+        // join Voice Channel
         const connection = joinVoiceChannel({
             channelId: voiceChannel.id,
-            guildId: interaction.guildId,
+            guildId: interaction.guild.id,
             adapterCreator: interaction.guild.voiceAdapterCreator,
         });
-
+        // create Audio Player
         const player = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Pause,
             },
         });
-
-        const subscription = connection.subscribe(player);
-
-        const FileName = "123.opus";
-        const resource = createAudioResource(createReadStream('./commands/music/songs/' + FileName), {
+        // subscribe Player to connection
+        connection.subscribe(player);
+        // extract id form link
+        const id = getYouTubeVideoId(link);
+        // create Audio resource from local file
+        const resource = createAudioResource(createReadStream('./commands/music/songs/' + id + '.opus'), {
             inputType: StreamType.Arbitrary,
         });
+        // play resource
         player.play(resource);
-
-        player.on('error', error => {
-            console.error(`Error: ${error.message} with resource ${error}`);
-            interaction.followUp('Error!');
-        });
-
-        player.on(AudioPlayerStatus.Playing, () => {
-            console.log('The audio player has started playing!');
-        });
-
+        // disconnect when finishing song
         player.on(AudioPlayerStatus.Idle, () => {
             interaction.followUp('Idle!');      
         });
 	},
 };
 
-async function executeBatFile(url){
-    // Path to your batch file
+async function executeBatFile(url) {
     const batFilePath = path.join(__dirname, 'yt-download.bat');
-    // console.log(batFilePath);
 
-    var runnableScript = exec(`${batFilePath} ${url}`,
-        (error, stdout, stderr) => {
-            console.log(stdout);
-            console.log(stderr);
-            if (error !== null) {
-                console.log(`exec error: ${error}`);
+    return new Promise((resolve, reject) => {
+        const runnableScript = exec(`${batFilePath} ${url}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`exec error: ${error}`);
+                reject(error); // Reject the promise if there's an error
+                return;
             }
+            console.log(stdout);
+            console.error(stderr);
+            resolve(); // Resolve the promise once the batch file finishes
         });
+    });
+}
 
-
-
-    return 1;
+function getYouTubeVideoId(url) {
+    const regex = /(?:youtube\.com\/.*v=|youtu\.be\/)([\w-]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null; // Return the ID if matched, otherwise null
 }
